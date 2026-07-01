@@ -175,10 +175,23 @@
 
   @media(max-width:600px){
     .form-row{grid-template-columns:1fr;}
-    .video-grid{grid-template-columns:repeat(2,1fr);}
-    .staff-layout,.user-view{padding:16px;}
+    .staff-layout,.user-view{padding:12px;}
     .url-box{flex-direction:column;}
     .url-box input{width:100%;}
+
+    /* トップバー：タブが1行に収まるように */
+    .topbar{padding:0 12px;gap:8px;}
+    .logo{font-size:11px;gap:6px;flex-shrink:1;min-width:0;overflow:hidden;white-space:nowrap;}
+    .logo-mark img{height:24px;width:24px;}
+    .mode-tabs{flex-shrink:0;}
+    .mode-tab{font-size:11px;padding:5px 10px;white-space:nowrap;}
+
+    /* 部位・目的タブを小さく */
+    .cat-tab{font-size:11px;padding:4px 10px;}
+    .cat-tabs-label{font-size:10px;}
+
+    /* 動画の埋め込みサイズをiPhoneに最適化 */
+    .pv-embed{width:100%;aspect-ratio:16/9;max-height:56vw;}
   }
 </style>
 </head>
