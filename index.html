@@ -216,6 +216,45 @@
 <div class="page active" id="staffPage">
   <div class="staff-layout">
 
+    <!-- スタッフ選択カード -->
+    <div class="card">
+      <div class="card-title">スタッフ選択</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>スタッフを選ぶ</label>
+        <div style="display:flex;gap:8px;">
+          <select id="staffSelect" style="flex:1;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1.5px solid var(--n100);border-radius:7px;outline:none;background:var(--white);color:var(--n900);" onchange="onStaffSelect()">
+            <option value="">-- スタッフを選択 --</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadStaffList()" style="padding:9px 14px;font-size:15px;" title="更新">↻</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;height:1px;background:var(--n100);"></div>
+        <span style="font-size:12px;color:var(--n300);">または</span>
+        <div style="flex:1;height:1px;background:var(--n100);"></div>
+      </div>
+      <div class="form-group">
+        <label>新規スタッフを登録する</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="newStaffName" placeholder="スタッフ名を入力" style="flex:1;min-width:0;" />
+          <button class="btn btn-outline" onclick="registerNewStaff()" style="flex-shrink:0;padding:9px 12px;font-size:13px;">＋ 登録</button>
+        </div>
+      </div>
+      <!-- 選択中スタッフ表示 -->
+      <div id="selectedStaffInfo" style="display:none;background:var(--n50);border:1.5px solid var(--n100);border-radius:8px;padding:10px 14px;margin-top:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div>
+            <div style="font-size:12px;color:var(--n500);margin-bottom:2px;">選択中のスタッフ</div>
+            <div style="font-size:15px;font-weight:700;color:var(--n900);" id="selectedStaffName">-</div>
+          </div>
+          <button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--n100);color:var(--n500);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;"
+            onmouseover="this.style.background='#fde8e8';this.style.color='var(--error)'"
+            onmouseout="this.style.background='var(--n100)';this.style.color='var(--n500)'"
+            onclick="deleteStaff()">×</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">利用者情報</div>
 
@@ -248,10 +287,16 @@
       <!-- 選択中の利用者表示 -->
       <div id="selectedUserInfo" style="display:none;background:var(--primary-50);border:1.5px solid var(--primary-100);border-radius:8px;padding:12px 16px;margin-bottom:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-          <div style="min-width:0;">
+          <div style="min-width:0;flex:1;">
             <div style="font-size:13px;color:var(--n500);margin-bottom:2px;">選択中の利用者</div>
             <div style="font-size:16px;font-weight:700;color:var(--primary-700);" id="selectedUserName">-</div>
-            <div style="font-size:11px;color:var(--n300);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="selectedUserId"></div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
+              <div style="font-size:11px;color:var(--n300);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="selectedUserId"></div>
+              <button onclick="copyUserUrl()" title="URLをコピー"
+                style="flex-shrink:0;width:20px;height:20px;border-radius:4px;border:1px solid var(--primary-300);
+                background:var(--white);color:var(--primary-700);cursor:pointer;font-size:11px;
+                display:flex;align-items:center;justify-content:center;padding:0;">⧉</button>
+            </div>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
             <button class="btn btn-secondary" onclick="openUserHistory()" style="font-size:12px;padding:6px 10px;white-space:nowrap;">履歴</button>
@@ -408,6 +453,9 @@ let activePart = 'すべて';
 let activePurpose = 'すべて';
 let currentUserId = null;
 let currentUserName = null;
+let currentUserUrl = null;
+let currentStaffId = null;
+let currentStaffName = null;
 
 // ── INIT ──────────────────────────────────────────
 window.onload = () => {
@@ -443,7 +491,7 @@ window.onload = () => {
   }
 
   syncFromGAS();
-  loadUserList();
+  loadStaffList();
 };
 
 // ── GAS 動画同期 ──────────────────────────────────
@@ -461,16 +509,109 @@ async function syncFromGAS() {
   finally { renderCatTabs(); renderVideoGrid(); }
 }
 
+// ── スタッフ一覧読み込み ──────────────────────────
+async function loadStaffList() {
+  try {
+    const res = await fetch(`${GAS_URL}?action=getStaffs`);
+    const json = await res.json();
+    const sel = document.getElementById('staffSelect');
+    const staffs = json.staffs || [];
+    sel.innerHTML = '<option value="">-- スタッフを選択 --</option>' +
+      staffs.map(s => `<option value="${s.staffId}">${escHtml(s.name)}</option>`).join('');
+    if (currentStaffId) sel.value = currentStaffId;
+  } catch(e) {}
+}
+
+// ── スタッフ選択 ──────────────────────────────────
+async function onStaffSelect() {
+  const sel = document.getElementById('staffSelect');
+  const staffId = sel.value;
+  const staffName = sel.options[sel.selectedIndex]?.text || '';
+  if (!staffId) {
+    currentStaffId = null; currentStaffName = null;
+    document.getElementById('selectedStaffInfo').style.display = 'none';
+    document.getElementById('userSelect').innerHTML = '<option value="">-- 利用者を選択 --</option>';
+    resetUserSelection();
+    return;
+  }
+  currentStaffId = staffId;
+  currentStaffName = staffName;
+  document.getElementById('selectedStaffInfo').style.display = 'block';
+  document.getElementById('selectedStaffName').textContent = staffName;
+  resetUserSelection();
+  await loadUserList();
+}
+
+// ── スタッフ登録 ──────────────────────────────────
+async function registerNewStaff() {
+  const name = document.getElementById('newStaffName').value.trim();
+  if (!name) { toast('スタッフ名を入力してください'); return; }
+  try {
+    const res = await fetch(`${GAS_URL}?action=registerStaff&name=${encodeURIComponent(name)}`);
+    const json = await res.json();
+    if (!json.staffId) throw new Error();
+    currentStaffId = json.staffId;
+    currentStaffName = name;
+    document.getElementById('newStaffName').value = '';
+    document.getElementById('selectedStaffInfo').style.display = 'block';
+    document.getElementById('selectedStaffName').textContent = name;
+    await loadStaffList();
+    document.getElementById('staffSelect').value = json.staffId;
+    toast(`${name} を登録しました`);
+  } catch(e) { toast('登録に失敗しました'); }
+}
+
+// ── スタッフ削除 ──────────────────────────────────
+async function deleteStaff() {
+  if (!currentStaffId) return;
+  if (!confirm(`「${currentStaffName}」を削除しますか？`)) return;
+  try {
+    const res = await fetch(`${GAS_URL}?action=deleteStaff&staffId=${encodeURIComponent(currentStaffId)}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    currentStaffId = null; currentStaffName = null;
+    document.getElementById('selectedStaffInfo').style.display = 'none';
+    document.getElementById('userSelect').innerHTML = '<option value="">-- 利用者を選択 --</option>';
+    resetUserSelection();
+    await loadStaffList();
+    toast('スタッフを削除しました');
+  } catch(e) { toast('削除に失敗しました'); }
+}
+
+function resetUserSelection() {
+  currentUserId = null; currentUserName = null; currentUserUrl = null;
+  document.getElementById('selectedUserInfo').style.display = 'none';
+  document.getElementById('urlOutput').classList.remove('show');
+}
+
 // ── 利用者一覧読み込み ────────────────────────────
 async function loadUserList() {
   try {
-    const res = await fetch(`${GAS_URL}?action=getUsers`);
+    const url = currentStaffId
+      ? `${GAS_URL}?action=getUsers&staffId=${encodeURIComponent(currentStaffId)}`
+      : `${GAS_URL}?action=getUsers`;
+    const res = await fetch(url);
     const json = await res.json();
     const sel = document.getElementById('userSelect');
     const users = json.users || [];
     sel.innerHTML = '<option value="">-- 利用者を選択 --</option>' +
       users.map(u => `<option value="${u.userId}">${escHtml(u.name)}</option>`).join('');
   } catch(e) {}
+}
+
+function copyUserUrl() {
+  if (!currentUserUrl) return;
+  navigator.clipboard.writeText(currentUserUrl)
+    .then(() => toast('URLをコピーしました ✓'))
+    .catch(() => {
+      const el = document.createElement('input');
+      el.value = currentUserUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      toast('URLをコピーしました ✓');
+    });
 }
 
 // ── 利用者選択 ────────────────────────────────────
@@ -485,25 +626,28 @@ function onUserSelect() {
   }
   currentUserId = userId;
   currentUserName = userName;
+  currentUserUrl = `${location.origin}${location.pathname}?user=${userId}`;
   document.getElementById('selectedUserInfo').style.display = 'block';
   document.getElementById('selectedUserName').textContent = userName;
-  document.getElementById('selectedUserId').textContent = `固定URL: ${location.origin}${location.pathname}?user=${userId}`;
+  document.getElementById('selectedUserId').textContent = currentUserUrl;
 }
 
 // ── 新規利用者登録 ────────────────────────────────
 async function registerNewUser() {
   const name = document.getElementById('newUserName').value.trim();
   if (!name) { toast('利用者名を入力してください'); return; }
+  if (!currentStaffId) { toast('先にスタッフを選択してください'); return; }
   try {
-    const res = await fetch(`${GAS_URL}?action=registerUser&name=${encodeURIComponent(name)}`);
+    const res = await fetch(`${GAS_URL}?action=registerUser&name=${encodeURIComponent(name)}&staffId=${encodeURIComponent(currentStaffId)}`);
     const json = await res.json();
     if (!json.userId) throw new Error();
     currentUserId = json.userId;
     currentUserName = name;
+    currentUserUrl = `${location.origin}${location.pathname}?user=${json.userId}`;
     document.getElementById('newUserName').value = '';
     document.getElementById('selectedUserInfo').style.display = 'block';
     document.getElementById('selectedUserName').textContent = name;
-    document.getElementById('selectedUserId').textContent = `固定URL: ${location.origin}${location.pathname}?user=${json.userId}`;
+    document.getElementById('selectedUserId').textContent = currentUserUrl;
     await loadUserList();
     document.getElementById('userSelect').value = json.userId;
     toast(`${name} さんを登録しました`);
