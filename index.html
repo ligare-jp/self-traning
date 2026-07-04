@@ -107,8 +107,8 @@
   .si-cat{font-size:11px;font-family:var(--font-ui);font-weight:700;color:var(--white);
     background:#7a9db5;padding:2px 8px;border-radius:10px;white-space:nowrap;}
   .si-name{font-size:14px;flex:1;min-width:100px;}
-  .btn-remove{width:26px;height:26px;border-radius:50%;border:none;background:var(--n100);
-    color:var(--n500);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+  .btn-remove{height:28px;padding:0 10px;border-radius:6px;border:none;background:var(--n100);
+    color:var(--n500);cursor:pointer;font-size:12px;font-family:var(--font-ui);display:flex;align-items:center;justify-content:center;transition:all .15s;}
   .btn-remove:hover{background:#fde8e8;color:var(--error);}
 
   .btn{font-family:var(--font-ui);font-size:14px;font-weight:500;padding:10px 22px;border-radius:8px;
@@ -218,11 +218,49 @@
 
     <div class="card">
       <div class="card-title">利用者情報</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>利用者名 *</label>
-          <input type="text" id="userName" placeholder="例：田中 太郎" />
+
+      <!-- 既存利用者選択 -->
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>既存の利用者から選ぶ</label>
+        <div style="display:flex;gap:8px;">
+          <select id="userSelect" style="flex:1;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1.5px solid var(--n100);border-radius:7px;outline:none;background:var(--white);color:var(--n900);" onchange="onUserSelect()">
+            <option value="">-- 利用者を選択 --</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadUserList()" style="padding:9px 14px;font-size:15px;" title="更新">↻</button>
         </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="flex:1;height:1px;background:var(--n100);"></div>
+        <span style="font-size:12px;color:var(--n300);">または</span>
+        <div style="flex:1;height:1px;background:var(--n100);"></div>
+      </div>
+
+      <!-- 新規登録 -->
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>新規利用者を登録する</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="newUserName" placeholder="利用者名を入力" style="flex:1;min-width:0;" />
+          <button class="btn btn-outline" onclick="registerNewUser()" style="flex-shrink:0;padding:9px 12px;font-size:13px;">＋ 登録</button>
+        </div>
+      </div>
+
+      <!-- 選択中の利用者表示 -->
+      <div id="selectedUserInfo" style="display:none;background:var(--primary-50);border:1.5px solid var(--primary-100);border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div style="min-width:0;">
+            <div style="font-size:13px;color:var(--n500);margin-bottom:2px;">選択中の利用者</div>
+            <div style="font-size:16px;font-weight:700;color:var(--primary-700);" id="selectedUserName">-</div>
+            <div style="font-size:11px;color:var(--n300);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="selectedUserId"></div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
+            <button class="btn btn-secondary" onclick="openUserHistory()" style="font-size:12px;padding:6px 10px;white-space:nowrap;">履歴</button>
+            <button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--n100);color:var(--n500);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;" onmouseover="this.style.background='#fde8e8';this.style.color='var(--error)'" onmouseout="this.style.background='var(--n100)';this.style.color='var(--n500)'" onclick="deleteUser()">×</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:4px;">
         <div class="form-group">
           <label>処方日</label>
           <input type="date" id="prescDate" />
@@ -258,13 +296,12 @@
         <button class="btn btn-secondary" onclick="clearAll()">リセット</button>
       </div>
       <div class="url-output" id="urlOutput">
-        <h3>✅ 利用者向け共有URLが生成されました</h3>
+        <h3>✅ メニューを保存しました</h3>
         <div class="url-box">
           <input type="text" id="generatedUrl" readonly />
           <button class="btn btn-primary" onclick="copyUrl()">コピー</button>
         </div>
         <div id="shortenStatus" style="font-size:12px;color:var(--n500);margin-top:6px;"></div>
-        <p style="font-size:12px;color:var(--n500);margin-top:8px;">このURLをLINE・メール等でお送りください。どのデバイスからでも開けます。</p>
       </div>
     </div>
 
@@ -334,7 +371,20 @@
   </div>
 </div>
 
+<!-- HISTORY MODAL -->
+<div class="preview-modal" id="historyModal" onclick="closeHistoryModal(event)">
+  <div class="preview-box" style="max-width:640px;max-height:calc(100vh - 24px);display:flex;flex-direction:column;">
+    <div class="preview-header">
+      <h3 id="historyModalTitle">過去のメニュー</h3>
+      <button class="preview-close" onclick="closeHistoryModalBtn()">✕</button>
+    </div>
+    <div id="historyModalBody" style="overflow-y:auto;padding:20px;flex:1;"></div>
+  </div>
+</div>
+
 <script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxaE1QQdLCRvDpFoWpsRirTLfP_KcKVp324yDoENpRIThpMWm06R9DzjJGWkzmI-4gm/exec';
+
 const DEFAULT_VIDEOS = [
   {id:'v1',title:'腹横筋アクティベーション',part:'腰・体幹',purpose:'安定性',url:'https://www.youtube.com/watch?v=VX4HMgHxkec'},
   {id:'v2',title:'ドローイン（腹式呼吸）',part:'腰・体幹',purpose:'安定性',url:'https://www.youtube.com/watch?v=K9yy00xFHqQ'},
@@ -350,30 +400,39 @@ const DEFAULT_VIDEOS = [
 ];
 
 const PURPOSE_ORDER = ['柔軟性', 'mobility', 'motor control', 'activation', '筋力'];
+function purposeRank(p) { const i = PURPOSE_ORDER.indexOf(p); return i >= 0 ? i : PURPOSE_ORDER.length; }
 
-function purposeRank(p) {
-  const i = PURPOSE_ORDER.indexOf(p);
-  return i >= 0 ? i : PURPOSE_ORDER.length;
-}
+let videoLibrary = JSON.parse(localStorage.getItem('lg_videos') || 'null') || [...DEFAULT_VIDEOS];
 let selectedVideos = [];
 let activePart = 'すべて';
 let activePurpose = 'すべて';
+let currentUserId = null;
+let currentUserName = null;
 
+// ── INIT ──────────────────────────────────────────
 window.onload = () => {
   document.getElementById('prescDate').value = new Date().toISOString().slice(0,10);
 
-  // ?id= 形式（GAS保存方式）
+  // ?user= 形式（利用者専用固定URL）
   const params = new URLSearchParams(location.search);
-  const progId = params.get('id');
-  if (progId) {
+  const userId = params.get('user');
+  if (userId) {
     document.getElementById('modeTabs').style.display = 'none';
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('userPage').classList.add('active');
-    loadUserFromId(progId);
+    loadUserPage(userId);
     return;
   }
 
-  // #data= 形式（Base64フォールバック）
+  // 旧形式フォールバック
+  const oldId = params.get('id');
+  if (oldId) {
+    document.getElementById('modeTabs').style.display = 'none';
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('userPage').classList.add('active');
+    loadUserFromOldId(oldId);
+    return;
+  }
   const hash = location.hash.slice(1);
   if (hash && hash.startsWith('data=')) {
     document.getElementById('modeTabs').style.display = 'none';
@@ -383,88 +442,414 @@ window.onload = () => {
     return;
   }
 
-  const gasUrl = localStorage.getItem('lg_gasUrl') || 'https://script.google.com/macros/s/AKfycbxaE1QQdLCRvDpFoWpsRirTLfP_KcKVp324yDoENpRIThpMWm06R9DzjJGWkzmI-4gm/exec';
-  syncFromGAS(gasUrl);
+  syncFromGAS();
+  loadUserList();
 };
 
-async function loadUserFromId(id) {
-  const el = document.getElementById('userView');
-  el.innerHTML = `<div class="empty-state"><div class="ei">⏳</div><h3>読み込み中...</h3></div>`;
+// ── GAS 動画同期 ──────────────────────────────────
+async function syncFromGAS() {
   try {
-    const gasUrl = 'https://script.google.com/macros/s/AKfycbxaE1QQdLCRvDpFoWpsRirTLfP_KcKVp324yDoENpRIThpMWm06R9DzjJGWkzmI-4gm/exec';
-    const res = await fetch(`${gasUrl}?action=load&id=${id}`);
-    const json = await res.json();
-    if (json.error || !json.data) throw new Error();
-    renderUserView(json.data, id);
-  } catch(e) {
-    el.innerHTML = `<div class="empty-state"><div class="ei">❌</div>
-      <h3>データの読み込みに失敗しました</h3>
-      <p>URLが正しくないか、データが見つかりません</p></div>`;
-  }
-}
-
-// ── GAS バックグラウンド同期 ──────────────────────
-async function syncFromGAS(url) {
-  try {
-    const res = await fetch(`${url}?action=videos`);
-    if (!res.ok) throw new Error();
+    const res = await fetch(`${GAS_URL}?action=videos`);
     const text = await res.text();
-    let parsed = [];
-    if (text.trim().startsWith('{')) {
-      const json = JSON.parse(text);
-      parsed = (json.videos || []).filter(v => v.title && v.url);
-    } else {
-      const rows = text.trim().split('\n').slice(1);
-      parsed = rows.map((row, i) => {
-        const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g,''));
-        return { id:'s'+i, part: cols[0]||'その他', purpose: cols[1]||'', title: cols[2]||'', url: cols[3]||'' };
-      }).filter(v => v.title && v.url);
-    }
+    const json = JSON.parse(text);
+    const parsed = (json.videos || []).filter(v => v.title && v.url);
     if (parsed.length) {
       videoLibrary = parsed;
       localStorage.setItem('lg_videos', JSON.stringify(videoLibrary));
     }
+  } catch(e) {}
+  finally { renderCatTabs(); renderVideoGrid(); }
+}
+
+// ── 利用者一覧読み込み ────────────────────────────
+async function loadUserList() {
+  try {
+    const res = await fetch(`${GAS_URL}?action=getUsers`);
+    const json = await res.json();
+    const sel = document.getElementById('userSelect');
+    const users = json.users || [];
+    sel.innerHTML = '<option value="">-- 利用者を選択 --</option>' +
+      users.map(u => `<option value="${u.userId}">${escHtml(u.name)}</option>`).join('');
+  } catch(e) {}
+}
+
+// ── 利用者選択 ────────────────────────────────────
+function onUserSelect() {
+  const sel = document.getElementById('userSelect');
+  const userId = sel.value;
+  const userName = sel.options[sel.selectedIndex]?.text || '';
+  if (!userId) {
+    currentUserId = null; currentUserName = null;
+    document.getElementById('selectedUserInfo').style.display = 'none';
+    return;
+  }
+  currentUserId = userId;
+  currentUserName = userName;
+  document.getElementById('selectedUserInfo').style.display = 'block';
+  document.getElementById('selectedUserName').textContent = userName;
+  document.getElementById('selectedUserId').textContent = `固定URL: ${location.origin}${location.pathname}?user=${userId}`;
+}
+
+// ── 新規利用者登録 ────────────────────────────────
+async function registerNewUser() {
+  const name = document.getElementById('newUserName').value.trim();
+  if (!name) { toast('利用者名を入力してください'); return; }
+  try {
+    const res = await fetch(`${GAS_URL}?action=registerUser&name=${encodeURIComponent(name)}`);
+    const json = await res.json();
+    if (!json.userId) throw new Error();
+    currentUserId = json.userId;
+    currentUserName = name;
+    document.getElementById('newUserName').value = '';
+    document.getElementById('selectedUserInfo').style.display = 'block';
+    document.getElementById('selectedUserName').textContent = name;
+    document.getElementById('selectedUserId').textContent = `固定URL: ${location.origin}${location.pathname}?user=${json.userId}`;
+    await loadUserList();
+    document.getElementById('userSelect').value = json.userId;
+    toast(`${name} さんを登録しました`);
+  } catch(e) { toast('登録に失敗しました'); }
+}
+
+// ── 処方を保存 ────────────────────────────────────
+async function generateUrl() {
+  if (!currentUserId) { toast('利用者を選択または登録してください'); return; }
+  if (!selectedVideos.length) { toast('動画を1本以上選択してください'); return; }
+
+  const prescription = {
+    date: document.getElementById('prescDate').value,
+    note: document.getElementById('userNote').value.trim(),
+    videos: selectedVideos.map(v=>({id:v.id,title:v.title,part:v.part,purpose:v.purpose,url:v.url,note:v.note||''}))
+  };
+
+  document.getElementById('urlOutput').classList.add('show');
+  document.getElementById('generatedUrl').value = '保存中...';
+  document.getElementById('shortenStatus').textContent = '⏳ メニューを保存中...';
+
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addPrescription', userId: currentUserId, ...prescription })
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    const userUrl = `${location.origin}${location.pathname}?user=${currentUserId}`;
+    document.getElementById('generatedUrl').value = userUrl;
+    document.getElementById('shortenStatus').textContent = `✅ ${currentUserName} さんの処方履歴に追加しました`;
+    toast('メニューを保存しました！');
   } catch(e) {
-    // 失敗時はキャッシュ済みデータをそのまま使用
-  } finally {
-    renderCatTabs();
-    renderVideoGrid();
+    document.getElementById('generatedUrl').value = '';
+    document.getElementById('shortenStatus').textContent = '❌ 保存に失敗しました。再度お試しください。';
+    toast('保存に失敗しました');
   }
 }
 
-// GAS URL の登録・確認（初回のみコンソールから実行）
-// localStorage.setItem('lg_gasUrl', 'https://script.google.com/macros/s/xxxxx/exec')
+// ── 利用者ページ表示（新方式） ────────────────────
+async function loadUserPage(userId) {
+  const el = document.getElementById('userView');
+  el.innerHTML = `<div class="empty-state"><div class="ei">⏳</div><h3>読み込み中...</h3></div>`;
+  try {
+    const res = await fetch(`${GAS_URL}?action=getUser&userId=${userId}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    renderUserHistoryView(json.user, json.prescriptions || [], userId);
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">❌</div>
+      <h3>データの読み込みに失敗しました</h3><p>URLが正しくないか、データが見つかりません</p></div>`;
+  }
+}
+
+// ── 利用者ページ描画（処方履歴つき） ─────────────
+let _prescriptions = [];
+let _userId = '';
+
+function renderUserHistoryView(user, prescriptions, userId) {
+  _prescriptions = prescriptions;
+  _userId = userId;
+  const el = document.getElementById('userView');
+  if (!prescriptions.length) {
+    el.innerHTML = `<div class="user-header">
+      <div class="ph-label">自主トレプログラム</div>
+      <h1>${escHtml(user.name)} さん</h1>
+    </div>
+    <div class="empty-state"><div class="ei">📋</div><h3>まだメニューがありません</h3></div>`;
+    return;
+  }
+
+  const latest = prescriptions[0];
+  const past = prescriptions.slice(1);
+
+  el.innerHTML = `
+    <div class="user-header">
+      <div class="ph-label">自主トレプログラム</div>
+      <h1>${escHtml(user.name)} さん</h1>
+      <div class="ph-meta">${latest.date ? `更新日：${latest.date}` : ''}</div>
+    </div>
+
+    <!-- 最新のメニュー -->
+    <div style="background:var(--white);border:2px solid var(--primary-300);border-radius:12px;padding:20px;margin-bottom:8px;">
+      <div style="font-size:11px;font-family:var(--font-ui);font-weight:700;color:var(--primary-500);letter-spacing:1px;margin-bottom:12px;">最新のメニュー · ${latest.date||''}</div>
+      <div id="prescriptionArea">
+        ${renderPrescription(latest, userId+'-0', true)}
+      </div>
+    </div>
+
+    <!-- 過去の履歴 -->
+    ${past.length ? `
+      <div style="margin-top:32px;padding-top:20px;border-top:1.5px solid var(--n100);">
+        <div style="font-size:12px;font-family:var(--font-ui);font-weight:700;color:var(--n500);letter-spacing:.8px;margin-bottom:12px;">過去のメニュー</div>
+        <div style="display:flex;flex-direction:column;gap:8px;" id="historyButtons">
+          ${past.map((p,i) => `
+            <button onclick="showHistory(${i+1})" id="hbtn_${i+1}"
+              style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;
+              background:var(--white);border:1.5px solid var(--n100);border-radius:8px;
+              cursor:pointer;transition:all .15s;font-family:var(--font-body);text-align:left;width:100%;"
+              onmouseover="this.style.borderColor='var(--primary-300)'"
+              onmouseout="this.style.borderColor='var(--n100)'">
+              <span style="font-size:14px;font-weight:500;color:var(--n900);">${p.date || '日付不明'}</span>
+              <span style="font-size:12px;color:var(--n500);">${(p.videos||[]).length}本 ▶</span>
+            </button>`).join('')}
+        </div>
+        <!-- 過去の処方表示エリア -->
+        <div id="historyArea" style="display:none;margin-top:16px;"></div>
+      </div>` : ''}`;
+}
+
+function showHistory(idx) {
+  const btn = document.getElementById('hbtn_'+idx);
+  const existingArea = document.getElementById('harea_'+idx);
+  const isOpen = existingArea && existingArea.style.display !== 'none';
+
+  // 全部閉じる
+  document.querySelectorAll('[id^="harea_"]').forEach(a => a.style.display = 'none');
+  document.querySelectorAll('#historyButtons button').forEach(b => {
+    b.style.background = 'var(--white)';
+    b.style.borderColor = 'var(--n100)';
+  });
+
+  if (isOpen) return; // 同じボタンなら閉じるだけ
+
+  // 展開エリアがなければ作る
+  if (!existingArea) {
+    const area = document.createElement('div');
+    area.id = 'harea_'+idx;
+    area.style.cssText = 'margin-top:8px;margin-bottom:8px;';
+    area.innerHTML = `
+      <div style="background:var(--white);border:1.5px solid var(--primary-100);border-radius:8px;padding:16px;">
+        <div style="font-size:12px;font-family:var(--font-ui);font-weight:700;color:var(--n500);
+          margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--n100);">
+          ${_prescriptions[idx].date || '日付不明'}
+        </div>
+        ${renderPrescription(_prescriptions[idx], _userId+'-'+idx, false)}
+      </div>`;
+    btn.insertAdjacentElement('afterend', area);
+  } else {
+    existingArea.style.display = 'block';
+  }
+
+  // ボタンをアクティブに
+  btn.style.background = 'var(--primary-50)';
+  btn.style.borderColor = 'var(--primary-300)';
+  setTimeout(() => btn.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
+}
+
+function renderPrescription(p, watchPrefix, showProgress) {
+  const parts = [...new Set((p.videos||[]).map(v=>v.part))];
+  const watchKey = 'lg_w_' + watchPrefix.slice(0,20);
+  let watched = JSON.parse(localStorage.getItem(watchKey)||'[]');
+  const total = (p.videos||[]).length;
+  const pct = total ? Math.round(watched.length/total*100) : 0;
+
+  return `
+    ${showProgress && p.note ? `<div class="ph-note" style="margin-bottom:16px;">📋 ${escHtml(p.note)}</div>` : ''}
+    ${showProgress ? `
+    <div class="progress-summary">
+      <span class="ps-label">本日の進捗</span>
+      <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%" id="pf_${watchPrefix}"></div></div>
+      <span class="ps-count" id="pc_${watchPrefix}">${watched.length} / ${total}</span>
+    </div>` : ''}
+    ${parts.map(part => {
+      const vids = (p.videos||[]).filter(v=>v.part===part).sort((a,b)=>purposeRank(a.purpose)-purposeRank(b.purpose));
+      return `<div class="category-section">
+        <div class="cat-label-view">${escHtml(part)}</div>
+        <div class="user-video-list">
+          ${vids.map((v,i) => {
+            const done = watched.includes(v.id||v.url);
+            return `<div class="pv-item${done?' open':''}">
+              <div class="pv-header" onclick="togglePV(this,'${watchKey}','${escAttr(v.id||v.url)}',${total},'${watchPrefix}')">
+                <div class="pv-num" style="${done?'background:var(--primary-500);color:white':''}">${done?'✓':(i+1)}</div>
+                <div class="pv-title">${escHtml(v.title)}${v.purpose?` <span style="font-size:11px;font-weight:500;color:var(--n500);">（${escHtml(v.purpose)}）</span>`:''}</div>
+                <div class="pv-toggle">▶</div>
+              </div>
+              <div class="pv-body">
+                <iframe class="pv-embed" src="${embedUrl(v.url)}" allowfullscreen
+                  allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>
+                ${v.note?`<div class="pv-note"><strong>📝 メモ：</strong>${escHtml(v.note)}</div>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+// ── 旧方式フォールバック ──────────────────────────
+async function loadUserFromOldId(id) {
+  const el = document.getElementById('userView');
+  el.innerHTML = `<div class="empty-state"><div class="ei">⏳</div><h3>読み込み中...</h3></div>`;
+  try {
+    const res = await fetch(`${GAS_URL}?action=load&id=${id}`);
+    const json = await res.json();
+    if (json.error || !json.data) throw new Error();
+    const data = json.data;
+    el.innerHTML = `<div class="user-header">
+      <div class="ph-label">自主トレプログラム</div>
+      <h1>${escHtml(data.name)} さん</h1>
+      <div class="ph-meta">${data.date||''}</div>
+      ${data.note?`<div class="ph-note">📋 ${escHtml(data.note)}</div>`:''}
+    </div>
+    ${renderPrescription(data, id, false)}`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty-state"><div class="ei">❌</div>
+      <h3>データの読み込みに失敗しました</h3></div>`;
+  }
+}
+
+function loadUserFromHash(encoded) {
+  try {
+    const data = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    const el = document.getElementById('userView');
+    el.innerHTML = `<div class="user-header">
+      <div class="ph-label">自主トレプログラム</div>
+      <h1>${escHtml(data.name)} さん</h1>
+      <div class="ph-meta">${data.date||''}</div>
+      ${data.note?`<div class="ph-note">📋 ${escHtml(data.note)}</div>`:''}
+    </div>
+    ${renderPrescription(data, encoded.slice(0,20), false)}`;
+  } catch(e) {
+    document.getElementById('userView').innerHTML = `<div class="empty-state"><div class="ei">❌</div>
+      <h3>データの読み込みに失敗しました</h3></div>`;
+  }
+}
+
+// ── 利用者削除 ────────────────────────────────────
+async function deleteUser() {
+  if (!currentUserId) return;
+  if (!confirm(`「${currentUserName}」さんを削除しますか？\n処方履歴もすべて削除されます。`)) return;
+  try {
+    const res = await fetch(`${GAS_URL}?action=deleteUser&userId=${encodeURIComponent(currentUserId)}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    currentUserId = null; currentUserName = null;
+    document.getElementById('selectedUserInfo').style.display = 'none';
+    document.getElementById('urlOutput').classList.remove('show');
+    await loadUserList();
+    toast('利用者を削除しました');
+  } catch(e) { toast('削除に失敗しました'); }
+}
+
+
+// ── 利用者履歴をスタッフ側で確認 ────────────────
+async function openUserHistory() {
+  if (!currentUserId) return;
+  const modal = document.getElementById('historyModal');
+  const body = document.getElementById('historyModalBody');
+  const title = document.getElementById('historyModalTitle');
+  title.textContent = `${currentUserName} さんの過去のメニュー`;
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--n500);">⏳ 読み込み中...</div>';
+  modal.classList.add('show');
+  try {
+    const res = await fetch(`${GAS_URL}?action=getUser&userId=${currentUserId}`);
+    const json = await res.json();
+    const prescriptions = json.prescriptions || [];
+    if (!prescriptions.length) {
+      body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--n500);">まだメニューがありません</div>';
+      return;
+    }
+    body.innerHTML = prescriptions.map((p, i) => `
+      <div style="margin-bottom:12px;border:1.5px solid var(--n100);border-radius:10px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--n50);">
+          <div style="cursor:pointer;flex:1;" onclick="toggleStaffHistory(${i})">
+            <div style="font-size:14px;font-weight:600;color:var(--n900);">${p.date||'日付不明'}</div>
+            <div style="font-size:12px;color:var(--n500);margin-top:2px;">${(p.videos||[]).length}本</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="deleteMenu(${i})"
+              style="font-size:12px;padding:4px 10px;border-radius:6px;border:1.5px solid #fca5a5;
+              background:white;color:#ef4444;cursor:pointer;white-space:nowrap;font-family:var(--font-ui);">
+              削除
+            </button>
+            <span style="color:var(--n300);font-size:14px;transition:transform .2s;cursor:pointer;" id="sarrow_${i}" onclick="toggleStaffHistory(${i})">▶</span>
+          </div>
+        </div>
+        <div id="shistory_${i}" style="display:none;padding:12px 16px;">
+          ${p.note?`<div class="ph-note" style="margin-bottom:10px;">📋 ${escHtml(p.note)}</div>`:''}
+          ${(p.videos||[]).map((v,j) => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--n100);">
+              <span style="font-size:12px;color:var(--n500);min-width:18px;">${j+1}</span>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:500;">${escHtml(v.title)}</div>
+                <div style="display:flex;gap:4px;margin-top:3px;">
+                  <span class="vr-cat" style="font-size:10px;">${escHtml(v.part)}</span>
+                  ${v.purpose?`<span class="vr-purpose" style="font-size:10px;">${escHtml(v.purpose)}</span>`:''}
+                </div>
+              </div>
+              ${v.note?`<span style="font-size:11px;color:var(--n500);">${escHtml(v.note)}</span>`:''}
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--error);">読み込みに失敗しました</div>';
+  }
+}
+
+function toggleStaffHistory(i) {
+  const area = document.getElementById('shistory_'+i);
+  const arrow = document.getElementById('sarrow_'+i);
+  const isOpen = area.style.display !== 'none';
+  area.style.display = isOpen ? 'none' : 'block';
+  arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
+
+async function deleteMenu(idx) {
+  if (!confirm('このメニューを削除しますか？\nこの操作は元に戻せません。')) return;
+  try {
+    const res = await fetch(`${GAS_URL}?action=deleteMenu&userId=${encodeURIComponent(currentUserId)}&idx=${idx}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    toast('メニューを削除しました');
+    await openUserHistory(); // 履歴を再読み込み
+  } catch(e) { toast('削除に失敗しました'); }
+}
+
+function closeHistoryModalBtn() {
+  document.getElementById('historyModal').classList.remove('show');
+}
+function closeHistoryModal(e) {
+  if (e.target === document.getElementById('historyModal')) closeHistoryModalBtn();
+}
 
 function switchMode(mode) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.mode-tab').forEach((t,i) => t.classList.toggle('active', mode==='staff'?i===0:i===1));
   document.getElementById(mode==='staff' ? 'staffPage' : 'userPage').classList.add('active');
-  if (mode === 'user') {
-    const url = document.getElementById('generatedUrl')?.value;
-    if (url && url.includes('?id=')) {
-      const id = new URLSearchParams(url.split('?')[1]).get('id');
-      if (id) { loadUserFromId(id); return; }
-    }
-    if (url && url.includes('#data=')) {
-      loadUserFromHash(url.split('#data=')[1]);
-      return;
-    }
+  if (mode === 'user' && currentUserId) {
+    loadUserPage(currentUserId);
+  } else if (mode === 'user') {
     document.getElementById('userView').innerHTML = `
       <div class="empty-state"><div class="ei">📋</div>
-      <h3>URLを生成してください</h3>
-      <p>スタッフ画面で利用者URLを生成すると、ここでプレビューできます</p></div>`;
+      <h3>利用者を選択してください</h3>
+      <p>スタッフ画面で利用者を選択すると、ここでプレビューできます</p></div>`;
   }
 }
 
+// ── CAT TABS ─────────────────────────────────────
 function renderCatTabs() {
   const parts = ['すべて', ...new Set(videoLibrary.map(v=>v.part))];
   const purposes = ['すべて', ...new Set(videoLibrary.map(v=>v.purpose).filter(Boolean))];
   document.getElementById('partTabs').innerHTML = parts.map(c =>
-    `<button class="cat-tab${c===activePart?' active':''}" onclick="setPart('${c}')">${c}</button>`
-  ).join('');
+    `<button class="cat-tab${c===activePart?' active':''}" onclick="setPart('${c}')">${c}</button>`).join('');
   document.getElementById('purposeTabs').innerHTML = purposes.map(c =>
-    `<button class="cat-tab purpose-tab${c===activePurpose?' active':''}" onclick="setPurpose('${c}')">${c}</button>`
-  ).join('');
+    `<button class="cat-tab purpose-tab${c===activePurpose?' active':''}" onclick="setPurpose('${c}')">${c}</button>`).join('');
 }
 function setPart(c) { activePart=c; renderCatTabs(); renderVideoGrid(); }
 function setPurpose(c) { activePurpose=c; renderCatTabs(); renderVideoGrid(); }
@@ -473,18 +858,11 @@ function renderVideoGrid() {
   let filtered = videoLibrary;
   if (activePart!=='すべて') filtered = filtered.filter(v=>v.part===activePart);
   if (activePurpose!=='すべて') filtered = filtered.filter(v=>v.purpose===activePurpose);
-
   const el = document.getElementById('videoGrid');
-  if (!filtered.length) {
-    el.innerHTML = '<div style="color:var(--n300);font-size:13px;">該当する動画はありません</div>';
-    return;
-  }
-
-  // 部位ごとにグループ化して表示（目的順にソート）
+  if (!filtered.length) { el.innerHTML = '<div style="color:var(--n300);font-size:13px;">該当する動画はありません</div>'; return; }
   const parts = [...new Set(filtered.map(v=>v.part))];
   el.innerHTML = parts.map(part => {
-    const vids = filtered.filter(v=>v.part===part)
-      .sort((a,b) => purposeRank(a.purpose) - purposeRank(b.purpose));
+    const vids = filtered.filter(v=>v.part===part).sort((a,b)=>purposeRank(a.purpose)-purposeRank(b.purpose));
     return `<div class="video-group">
       <div class="video-group-title">${escHtml(part)}</div>
       ${vids.map(v => {
@@ -505,59 +883,13 @@ function renderVideoGrid() {
   }).join('');
 }
 
-function openPreview(e, id) {
-  e.stopPropagation();
-  const v = videoLibrary.find(x=>x.id===id);
-  if (!v) return;
-  document.getElementById('previewTitle').textContent = v.title;
-  document.getElementById('previewEmbed').src = embedUrl(v.url);
-  document.getElementById('previewModal').classList.add('show');
-}
-function closePreviewBtn() {
-  document.getElementById('previewEmbed').src = '';
-  document.getElementById('previewModal').classList.remove('show');
-}
-function closePreview(e) {
-  if (e.target === document.getElementById('previewModal')) closePreviewBtn();
-}
-
 function toggleVideo(id) {
   const v = videoLibrary.find(x=>x.id===id);
   if (!v) return;
   const idx = selectedVideos.findIndex(s=>s.id===id);
   if (idx>=0) selectedVideos.splice(idx,1);
   else selectedVideos.push({...v, note:''});
-  renderVideoGrid();
-  renderSelected();
-}
-
-function openAddModal() {
-  document.getElementById('newVideoTitle').value = '';
-  document.getElementById('newVideoUrl').value = '';
-  document.getElementById('addModal').classList.add('show');
-  setTimeout(() => document.getElementById('newVideoTitle').focus(), 100);
-}
-function closeAddModalBtn() {
-  document.getElementById('addModal').classList.remove('show');
-}
-function closeAddModal(e) {
-  if (e.target === document.getElementById('addModal')) closeAddModalBtn();
-}
-
-function addCustomVideo() {
-  const title = document.getElementById('newVideoTitle').value.trim();
-  const url = document.getElementById('newVideoUrl').value.trim();
-  const part = document.getElementById('newVideoPart').value;
-  const purpose = document.getElementById('newVideoPurpose').value;
-  if (!title||!url) { toast('タイトルとURLを入力してください'); return; }
-  const id = 'cv'+Date.now();
-  videoLibrary.push({id,title,part,purpose,url});
-  localStorage.setItem('lg_videos', JSON.stringify(videoLibrary));
-  closeAddModalBtn();
-  activePart = part; activePurpose = 'すべて';
-  renderCatTabs();
-  renderVideoGrid();
-  toast('動画を追加しました');
+  renderVideoGrid(); renderSelected();
 }
 
 function renderSelected() {
@@ -579,46 +911,33 @@ function renderSelected() {
       <input type="text" placeholder="メモ（例：10回×2セット）" value="${escHtml(v.note||'')}"
         style="flex:1.2;font-size:12px;padding:5px 8px;border:1px solid var(--n100);border-radius:5px;outline:none;min-width:0;"
         oninput="selectedVideos[${i}].note=this.value" />
-      <button class="btn-remove" onclick="removeSelected(${i})">×</button>
+      <button style="width:24px;height:24px;border-radius:50%;border:none;background:var(--n100);color:var(--n500);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;" onmouseover="this.style.background='#fde8e8';this.style.color='var(--error)'" onmouseout="this.style.background='var(--n100)';this.style.color='var(--n500)'" onclick="removeSelected(${i})">×</button>
     </div>`).join('');
 }
 function removeSelected(i) { selectedVideos.splice(i,1); renderVideoGrid(); renderSelected(); }
 
-async function generateUrl() {
-  const name = document.getElementById('userName').value.trim();
-  if (!name) { toast('利用者名を入力してください'); return; }
-  if (!selectedVideos.length) { toast('動画を1本以上選択してください'); return; }
-  const data = {
-    name,
-    date: document.getElementById('prescDate').value,
-    note: document.getElementById('userNote').value.trim(),
-    videos: selectedVideos.map(v=>({id:v.id,title:v.title,part:v.part,purpose:v.purpose,url:v.url,note:v.note||''}))
-  };
+function openAddModal() {
+  document.getElementById('newVideoTitle').value = '';
+  document.getElementById('newVideoUrl').value = '';
+  document.getElementById('addModal').classList.add('show');
+  setTimeout(() => document.getElementById('newVideoTitle').focus(), 100);
+}
+function closeAddModalBtn() { document.getElementById('addModal').classList.remove('show'); }
+function closeAddModal(e) { if (e.target === document.getElementById('addModal')) closeAddModalBtn(); }
 
-  document.getElementById('urlOutput').classList.add('show');
-  document.getElementById('generatedUrl').value = '生成中...';
-  document.getElementById('shortenStatus').textContent = '⏳ URLを生成中...';
-
-  try {
-    const gasUrl = 'https://script.google.com/macros/s/AKfycbxaE1QQdLCRvDpFoWpsRirTLfP_KcKVp324yDoENpRIThpMWm06R9DzjJGWkzmI-4gm/exec';
-    const res = await fetch(gasUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'save', data })
-    });
-    const json = await res.json();
-    if (!json.id) throw new Error();
-    const shortUrl = `${location.origin}${location.pathname}?id=${json.id}`;
-    document.getElementById('generatedUrl').value = shortUrl;
-    document.getElementById('shortenStatus').textContent = '✅ URLを生成しました';
-    toast('URLを生成しました！');
-  } catch(e) {
-    // フォールバック: 元のBase64方式
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    const longUrl = `${location.origin}${location.pathname}#data=${encoded}`;
-    document.getElementById('generatedUrl').value = longUrl;
-    document.getElementById('shortenStatus').textContent = '⚠️ サーバー保存に失敗したため長いURLを使用しています';
-    toast('URLを生成しました（長いURL）');
-  }
+function addCustomVideo() {
+  const title = document.getElementById('newVideoTitle').value.trim();
+  const url = document.getElementById('newVideoUrl').value.trim();
+  const part = document.getElementById('newVideoPart').value;
+  const purpose = document.getElementById('newVideoPurpose').value;
+  if (!title||!url) { toast('タイトルとURLを入力してください'); return; }
+  const id = 'cv'+Date.now();
+  videoLibrary.push({id,title,part,purpose,url});
+  localStorage.setItem('lg_videos', JSON.stringify(videoLibrary));
+  closeAddModalBtn();
+  activePart = part; activePurpose = 'すべて';
+  renderCatTabs(); renderVideoGrid();
+  toast('動画を追加しました');
 }
 
 function copyUrl() {
@@ -630,70 +949,23 @@ function copyUrl() {
 
 function clearAll() {
   selectedVideos=[];
-  document.getElementById('userName').value='';
   document.getElementById('userNote').value='';
   document.getElementById('urlOutput').classList.remove('show');
   renderVideoGrid(); renderSelected();
 }
 
-function loadUserFromHash(encoded) {
-  try {
-    const data = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-    renderUserView(data, encoded);
-  } catch(e) {
-    document.getElementById('userView').innerHTML = `
-      <div class="empty-state"><div class="ei">❌</div>
-      <h3>データの読み込みに失敗しました</h3>
-      <p>URLが正しくない可能性があります</p></div>`;
-  }
+function openPreview(e, id) {
+  e.stopPropagation();
+  const v = videoLibrary.find(x=>x.id===id);
+  if (!v) return;
+  document.getElementById('previewTitle').textContent = v.title;
+  document.getElementById('previewEmbed').src = embedUrl(v.url);
+  document.getElementById('previewModal').classList.add('show');
 }
+function closePreviewBtn() { document.getElementById('previewEmbed').src=''; document.getElementById('previewModal').classList.remove('show'); }
+function closePreview(e) { if (e.target === document.getElementById('previewModal')) closePreviewBtn(); }
 
-function renderUserView(data, encoded) {
-  const parts = [...new Set((data.videos||[]).map(v=>v.part))];
-  const watchKey = 'lg_w_' + (encoded||'').slice(0,20);
-  let watched = JSON.parse(localStorage.getItem(watchKey)||'[]');
-  const total = (data.videos||[]).length;
-  const pct = total ? Math.round(watched.length/total*100) : 0;
-
-  document.getElementById('userView').innerHTML = `
-    <div class="user-header">
-      <div class="ph-label">自主トレプログラム</div>
-      <h1>${escHtml(data.name)} さん</h1>
-      <div class="ph-meta">${data.date?data.date:''}</div>
-      ${data.note?`<div class="ph-note">📋 ${escHtml(data.note)}</div>`:''}
-    </div>
-    <div class="progress-summary">
-      <span class="ps-label">本日の進捗</span>
-      <div class="progress-bar"><div class="progress-bar-fill" id="progFill" style="width:${pct}%"></div></div>
-      <span class="ps-count" id="progCount">${watched.length} / ${total}</span>
-    </div>
-    ${parts.map(part => {
-      const vids = (data.videos||[]).filter(v=>v.part===part)
-          .sort((a,b) => purposeRank(a.purpose) - purposeRank(b.purpose));
-      return `<div class="category-section">
-        <div class="cat-label-view">${escHtml(part)}</div>
-        <div class="user-video-list">
-          ${vids.map((v,i) => {
-            const done = watched.includes(v.id||v.url);
-            return `<div class="pv-item${done?' open':''}">
-              <div class="pv-header" onclick="togglePV(this,'${watchKey}','${escAttr(v.id||v.url)}',${total})">
-                <div class="pv-num" style="${done?'background:var(--primary-500);color:white':''}">${done?'✓':(i+1)}</div>
-                <div class="pv-title">${escHtml(v.title)}${v.purpose?` <span style="font-size:11px;font-weight:500;color:var(--n500);">（${escHtml(v.purpose)}）</span>`:''}</div>
-                <div class="pv-toggle">▶</div>
-              </div>
-              <div class="pv-body">
-                <iframe class="pv-embed" src="${embedUrl(v.url)}" allowfullscreen
-                  allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>
-                ${v.note?`<div class="pv-note"><strong>📝 メモ：</strong>${escHtml(v.note)}</div>`:''}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-    }).join('')}`;
-}
-
-function togglePV(header, watchKey, vid, total) {
+function togglePV(header, watchKey, vid, total, prefix) {
   const item = header.parentElement;
   const wasOpen = item.classList.contains('open');
   item.classList.toggle('open');
@@ -701,9 +973,9 @@ function togglePV(header, watchKey, vid, total) {
     let watched = JSON.parse(localStorage.getItem(watchKey)||'[]');
     if (!watched.includes(vid)) { watched.push(vid); localStorage.setItem(watchKey, JSON.stringify(watched)); }
     const pct = Math.round(watched.length/total*100);
-    const fill = document.getElementById('progFill');
+    const fill = document.getElementById('pf_'+prefix);
     if (fill) fill.style.width=pct+'%';
-    const cnt = document.getElementById('progCount');
+    const cnt = document.getElementById('pc_'+prefix);
     if (cnt) cnt.textContent=watched.length+' / '+total;
     const num = header.querySelector('.pv-num');
     if (num){ num.style.background='var(--primary-500)'; num.style.color='white'; num.textContent='✓'; }
