@@ -798,29 +798,19 @@ function showHistory(idx) {
 
 function renderPrescription(p, watchPrefix, showProgress) {
   const parts = [...new Set((p.videos||[]).map(v=>v.part))];
-  const watchKey = 'lg_w_' + watchPrefix.slice(0,20);
-  let watched = JSON.parse(localStorage.getItem(watchKey)||'[]');
   const total = (p.videos||[]).length;
-  const pct = total ? Math.round(watched.length/total*100) : 0;
 
   return `
     ${showProgress && p.note ? `<div class="ph-note" style="margin-bottom:16px;">📋 ${escHtml(p.note)}</div>` : ''}
-    ${showProgress ? `
-    <div class="progress-summary">
-      <span class="ps-label">本日の進捗</span>
-      <div class="progress-bar"><div class="progress-bar-fill" style="width:${pct}%" id="pf_${watchPrefix}"></div></div>
-      <span class="ps-count" id="pc_${watchPrefix}">${watched.length} / ${total}</span>
-    </div>` : ''}
     ${parts.map(part => {
       const vids = (p.videos||[]).filter(v=>v.part===part).sort((a,b)=>purposeRank(a.purpose)-purposeRank(b.purpose));
       return `<div class="category-section">
         <div class="cat-label-view">${escHtml(part)}</div>
         <div class="user-video-list">
-          ${vids.map((v,i) => {
-            const done = watched.includes(v.id||v.url);
-            return `<div class="pv-item${done?' open':''}">
-              <div class="pv-header" onclick="togglePV(this,'${watchKey}','${escAttr(v.id||v.url)}',${total},'${watchPrefix}')">
-                <div class="pv-num" style="${done?'background:var(--primary-500);color:white':''}">${done?'✓':(i+1)}</div>
+          ${vids.map((v,i) => `
+            <div class="pv-item">
+              <div class="pv-header" onclick="togglePV(this)">
+                <div class="pv-num">${i+1}</div>
                 <div class="pv-title">${escHtml(v.title)}${v.purpose?` <span style="font-size:11px;font-weight:500;color:var(--n500);">（${escHtml(v.purpose)}）</span>`:''}</div>
                 <div class="pv-toggle">▶</div>
               </div>
@@ -829,8 +819,7 @@ function renderPrescription(p, watchPrefix, showProgress) {
                   allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>
                 ${v.note?`<div class="pv-note"><strong>📝 メモ：</strong>${escHtml(v.note)}</div>`:''}
               </div>
-            </div>`;
-          }).join('')}
+            </div>`).join('')}
         </div>
       </div>`;
     }).join('')}`;
@@ -1111,19 +1100,7 @@ function closePreview(e) { if (e.target === document.getElementById('previewModa
 
 function togglePV(header, watchKey, vid, total, prefix) {
   const item = header.parentElement;
-  const wasOpen = item.classList.contains('open');
   item.classList.toggle('open');
-  if (!wasOpen) {
-    let watched = JSON.parse(localStorage.getItem(watchKey)||'[]');
-    if (!watched.includes(vid)) { watched.push(vid); localStorage.setItem(watchKey, JSON.stringify(watched)); }
-    const pct = Math.round(watched.length/total*100);
-    const fill = document.getElementById('pf_'+prefix);
-    if (fill) fill.style.width=pct+'%';
-    const cnt = document.getElementById('pc_'+prefix);
-    if (cnt) cnt.textContent=watched.length+' / '+total;
-    const num = header.querySelector('.pv-num');
-    if (num){ num.style.background='var(--primary-500)'; num.style.color='white'; num.textContent='✓'; }
-  }
 }
 
 function embedUrl(url) {
