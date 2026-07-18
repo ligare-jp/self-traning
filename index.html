@@ -341,7 +341,7 @@
         <div style="color:var(--n300);font-size:13px;padding:8px 0;">まだ動画が選択されていません</div>
       </div>
       <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
-        <button class="btn btn-primary" onclick="generateUrl()">🔗 共有URLを生成</button>
+        <button class="btn btn-primary" onclick="generateUrl()"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> メニューを保存</button>
         <button class="btn btn-secondary" onclick="clearAll()">リセット</button>
       </div>
       <div class="url-output" id="urlOutput">
@@ -801,13 +801,17 @@ function showHistory(idx) {
 }
 
 function renderPrescription(p, watchPrefix, showProgress) {
-  const parts = [...new Set((p.videos||[]).map(v=>v.part))];
-  const total = (p.videos||[]).length;
+  // 部位の出現順を選択順で保持
+  const parts = (p.videos||[]).reduce((acc, v) => {
+    if (!acc.includes(v.part)) acc.push(v.part);
+    return acc;
+  }, []);
 
   return `
     ${showProgress && p.note ? `<div class="ph-note" style="margin-bottom:16px;">📋 ${escHtml(p.note)}</div>` : ''}
     ${parts.map(part => {
-      const vids = (p.videos||[]).filter(v=>v.part===part).sort((a,b)=>purposeRank(a.purpose)-purposeRank(b.purpose));
+      // ソートせず選択順のまま
+      const vids = (p.videos||[]).filter(v=>v.part===part);
       return `<div class="category-section">
         <div class="cat-label-view">${escHtml(part)}</div>
         <div class="user-video-list">
