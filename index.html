@@ -830,36 +830,25 @@ function showHistory(idx) {
 }
 
 function renderPrescription(p, watchPrefix, showProgress) {
-  // 部位の出現順を選択順で保持
-  const parts = (p.videos||[]).reduce((acc, v) => {
-    if (!acc.includes(v.part)) acc.push(v.part);
-    return acc;
-  }, []);
+  const videos = p.videos || [];
 
   return `
     ${showProgress && p.note ? `<div class="ph-note" style="margin-bottom:16px;">📋 ${escHtml(p.note)}</div>` : ''}
-    ${parts.map(part => {
-      // ソートせず選択順のまま
-      const vids = (p.videos||[]).filter(v=>v.part===part);
-      return `<div class="category-section">
-        <div class="cat-label-view">${escHtml(part)}</div>
-        <div class="user-video-list">
-          ${vids.map((v,i) => `
-            <div class="pv-item">
-              <div class="pv-header" onclick="togglePV(this)">
-                <div class="pv-num">${i+1}</div>
-                <div class="pv-title">${escHtml(v.title)}${v.purpose?` <span style="font-size:11px;font-weight:500;color:var(--n500);">（${escHtml(v.purpose)}）</span>`:''}</div>
-                <div class="pv-toggle">▶</div>
-              </div>
-              <div class="pv-body">
-                <iframe class="pv-embed" src="${embedUrl(v.url)}" allowfullscreen
-                  allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>
-                ${v.note?`<div class="pv-note"><strong>📝 メモ：</strong>${escHtml(v.note)}</div>`:''}
-              </div>
-            </div>`).join('')}
-        </div>
-      </div>`;
-    }).join('')}`;
+    <div class="user-video-list">
+      ${videos.map((v, i) => `
+        <div class="pv-item">
+          <div class="pv-header" onclick="togglePV(this)">
+            <div class="pv-num">${i + 1}</div>
+            <div class="pv-title">${escHtml(v.title)}${v.purpose ? ` <span style="font-size:11px;font-weight:500;color:var(--n500);">（${escHtml(v.purpose)}）</span>` : ''}</div>
+            <div class="pv-toggle">▶</div>
+          </div>
+          <div class="pv-body">
+            <iframe class="pv-embed" src="${embedUrl(v.url)}" allowfullscreen
+              allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>
+            ${v.note ? `<div class="pv-note"><strong>📝 メモ：</strong>${escHtml(v.note)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
 }
 
 // ── 旧方式フォールバック ──────────────────────────
