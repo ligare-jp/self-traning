@@ -554,6 +554,14 @@ async function loadStaffList() {
 }
 
 // ── スタッフ選択 ──────────────────────────────────
+function onStaffSelectDropdown() {
+  const sel = document.getElementById('staffSelect');
+  const staffId = sel.value;
+  const staffName = sel.options[sel.selectedIndex]?.text || '';
+  if (!staffId) { clearStaffSelection(); return; }
+  selectStaff(staffId, staffName);
+}
+
 async function selectStaff(staffId, staffName) {
   currentStaffId = staffId;
   currentStaffName = staffName;
@@ -591,6 +599,14 @@ function selectUser(userId, userName) {
   document.getElementById('selectedUserName').textContent = userName;
   document.getElementById('selectedUserId').textContent = currentUserUrl;
   loadUserList();
+}
+
+function onUserSelectDropdown() {
+  const sel = document.getElementById('userSelect');
+  const userId = sel.value;
+  const userName = sel.options[sel.selectedIndex]?.text || '';
+  if (!userId) { clearUserSelection(); return; }
+  selectUser(userId, userName);
 }
 
 function clearUserSelection() {
