@@ -712,6 +712,7 @@ async function submitRenameUser() {
 }
 
 
+function copyUserUrl() {
   if (!currentUserUrl) return;
   navigator.clipboard.writeText(currentUserUrl)
     .then(() => toast('URLをコピーしました ✓'))
