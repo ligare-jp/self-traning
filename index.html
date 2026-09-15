@@ -283,7 +283,11 @@
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <div style="min-width:0;flex:1;">
             <div style="font-size:10px;font-weight:300;color:var(--n500);margin-bottom:2px;">選択中の利用者</div>
-            <div style="font-size:16px;font-weight:700;color:var(--primary-700);" id="selectedUserName">-</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="font-size:16px;font-weight:700;color:var(--primary-700);" id="selectedUserName">-</div>
+              <button onclick="openRenameUser()" title="名前を変更"
+                style="font-size:11px;padding:2px 8px;border-radius:5px;border:1.5px solid var(--n100);background:var(--white);color:var(--n500);cursor:pointer;font-family:var(--font-ui);white-space:nowrap;">編集</button>
+            </div>
           </div>
           <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">
             <button class="btn btn-secondary" onclick="openUserHistory()" style="font-size:11px;padding:4px 10px;white-space:nowrap;">履歴</button>
@@ -416,6 +420,26 @@
   </div>
 </div>
 
+<!-- RENAME USER MODAL -->
+<div class="preview-modal" id="renameModal" onclick="closeRenameModal(event)">
+  <div class="preview-box" style="max-width:400px;">
+    <div class="preview-header">
+      <h3>利用者名を変更する</h3>
+      <button class="preview-close" onclick="closeRenameModalBtn()">✕</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+      <div class="form-group">
+        <label>新しい名前</label>
+        <input type="text" id="renameInput" placeholder="利用者名を入力" />
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secondary" onclick="closeRenameModalBtn()">キャンセル</button>
+        <button class="btn btn-primary" onclick="submitRenameUser()">変更する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxaE1QQdLCRvDpFoWpsRirTLfP_KcKVp324yDoENpRIThpMWm06R9DzjJGWkzmI-4gm/exec';
 
@@ -509,19 +533,6 @@ async function loadStaffList() {
       staffs.map(s => `<option value="${s.staffId}">${escHtml(s.name)}</option>`).join('');
     if (currentStaffId) sel.value = currentStaffId;
   } catch(e) {}
-}
-
-function onStaffSelectDropdown() {
-  const sel = document.getElementById('staffSelect');
-  const staffId = sel.value;
-  const staffName = sel.options[sel.selectedIndex]?.text || '';
-  if (!staffId) { clearStaffSelection(); return; }
-  selectStaff(staffId, staffName);
-}
-
-async function confirmDeleteStaffSelected() {
-  if (!currentStaffId) { toast('スタッフを選択してください'); return; }
-  await confirmDeleteStaff(currentStaffId, currentStaffName);
 }
 
 // ── スタッフ選択 ──────────────────────────────────
@@ -638,7 +649,35 @@ async function confirmDeleteUserSelected() {
   await confirmDeleteUser(currentUserId, currentUserName);
 }
 
-function copyUserUrl() {
+function openRenameUser() {
+  if (!currentUserId) return;
+  document.getElementById('renameInput').value = currentUserName;
+  document.getElementById('renameModal').classList.add('show');
+  setTimeout(() => document.getElementById('renameInput').focus(), 100);
+}
+function closeRenameModalBtn() {
+  document.getElementById('renameModal').classList.remove('show');
+}
+function closeRenameModal(e) {
+  if (e.target === document.getElementById('renameModal')) closeRenameModalBtn();
+}
+async function submitRenameUser() {
+  const name = document.getElementById('renameInput').value.trim();
+  if (!name) { toast('名前を入力してください'); return; }
+  try {
+    const res = await fetch(`${GAS_URL}?action=renameUser&userId=${encodeURIComponent(currentUserId)}&name=${encodeURIComponent(name)}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error();
+    currentUserName = name;
+    document.getElementById('selectedUserName').textContent = name;
+    closeRenameModalBtn();
+    await loadUserList();
+    document.getElementById('userSelect').value = currentUserId;
+    toast('名前を変更しました');
+  } catch(e) { toast('変更に失敗しました'); }
+}
+
+
   if (!currentUserUrl) return;
   navigator.clipboard.writeText(currentUserUrl)
     .then(() => toast('URLをコピーしました ✓'))
