@@ -503,26 +503,44 @@ window.onload = () => {
     return;
   }
 
-  syncFromGAS();
-  loadStaffList();
+  // 動画リストとスタッフ一覧を並列取得
+  initStaffAndVideos();
 };
 
-// ── GAS 動画同期 ──────────────────────────────────
-async function syncFromGAS() {
+// ── 起動時並列取得 ────────────────────────────────
+async function initStaffAndVideos() {
+  // キャッシュがあれば先に表示
+  renderCatTabs();
+  renderVideoGrid();
+
   try {
-    const res = await fetch(`${GAS_URL}?action=videos`);
-    const text = await res.text();
-    const json = JSON.parse(text);
-    const parsed = (json.videos || []).filter(v => v.title && v.url);
+    const [videosRes, staffsRes] = await Promise.all([
+      fetch(`${GAS_URL}?action=videos`),
+      fetch(`${GAS_URL}?action=getStaffs`)
+    ]);
+
+    // 動画リスト処理
+    const videosJson = await videosRes.json();
+    const parsed = (videosJson.videos || []).filter(v => v.title && v.url);
     if (parsed.length) {
       videoLibrary = parsed;
       localStorage.setItem('lg_videos', JSON.stringify(videoLibrary));
+      renderCatTabs();
+      renderVideoGrid();
     }
+
+    // スタッフ一覧処理
+    const staffsJson = await staffsRes.json();
+    const staffs = staffsJson.staffs || [];
+    const sel = document.getElementById('staffSelect');
+    sel.innerHTML = '<option value="">-- スタッフを選択 --</option>' +
+      staffs.map(s => `<option value="${s.staffId}">${escHtml(s.name)}</option>`).join('');
+    if (currentStaffId) sel.value = currentStaffId;
+
   } catch(e) {}
-  finally { renderCatTabs(); renderVideoGrid(); }
 }
 
-// ── スタッフ一覧読み込み ──────────────────────────
+// ── スタッフ一覧読み込み（↻ボタン用） ───────────
 async function loadStaffList() {
   try {
     const res = await fetch(`${GAS_URL}?action=getStaffs`);
